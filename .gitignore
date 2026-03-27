@@ -1,0 +1,21 @@
+# Database
+tracker.db
+tracker.db-wal
+tracker.db-shm
+
+# Backups
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
