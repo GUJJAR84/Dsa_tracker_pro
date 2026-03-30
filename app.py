@@ -1306,6 +1306,32 @@ elif page == "📈 Analytics":
             st.info("No complexity data logged yet.")
 
         st.markdown("---")
+
+        # ── Pattern Performance Table ──
+        st.subheader("📋 Performance by Pattern")
+        pat_perf = {}
+        for p in problems:
+            pat = p["pattern"]
+            if pat not in pat_perf:
+                pat_perf[pat] = {"count": 0, "conf": [], "time": [], "ind": 0}
+            pat_perf[pat]["count"] += 1
+            pat_perf[pat]["conf"].append(p.get("confidence", 3))
+            if p.get("time_taken", 0) > 0:
+                pat_perf[pat]["time"].append(p["time_taken"])
+            if p.get("independent"):
+                pat_perf[pat]["ind"] += 1
+
+        table_md = "| Pattern | Solved | Avg ⭐ | Avg ⏱ | Independent |\n|---|---|---|---|---|\n"
+        for pat in sorted(pat_perf, key=lambda x: pat_perf[x]["count"], reverse=True):
+            pp = pat_perf[pat]
+            avg_c = sum(pp["conf"]) / len(pp["conf"])
+            avg_t = f"{round(sum(pp['time'])/len(pp['time']))} min" if pp["time"] else "—"
+            ind_pct = f"{round(pp['ind']/pp['count']*100)}%"
+            stars = "⭐" * round(avg_c)
+            table_md += f"| {pat} | {pp['count']} | {stars} ({avg_c:.1f}) | {avg_t} | {ind_pct} |\n"
+        st.markdown(table_md)
+
+        st.markdown("---")
         st.subheader("📊 Overall Stats")
         oc1, oc2 = st.columns(2)
         oc1.metric("Total DSA Problems", solved_count)
