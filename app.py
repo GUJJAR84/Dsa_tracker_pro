@@ -862,6 +862,9 @@ elif page == "🔍 Search & Filter":
     if not problems:
         st.markdown('<div class="empty-state"><div class="icon">🔍</div><div class="title">Nothing to search</div><div class="desc">Start logging problems to use search!</div></div>', unsafe_allow_html=True)
     else:
+        # Collect all tags for the filter
+        all_tags = sorted({t for p in problems for t in p.get("tags", []) if t})
+
         fc1, fc2, fc3, fc4 = st.columns(4)
         with fc1:
             search_q = st.text_input("🔎 Search by name", "")
@@ -872,6 +875,13 @@ elif page == "🔍 Search & Filter":
         with fc4:
             f_pat = st.selectbox("Pattern", ["All"] + ALL_PATTERNS)
 
+        # Second row of filters
+        ff1, ff2 = st.columns(2)
+        with ff1:
+            f_tag = st.selectbox("🏷️ Tag", ["All"] + all_tags) if all_tags else "All"
+        with ff2:
+            f_conf = st.selectbox("⭐ Confidence", ["All", "1 ⭐", "2 ⭐⭐", "3 ⭐⭐⭐", "4 ⭐⭐⭐⭐", "5 ⭐⭐⭐⭐⭐"])
+
         filtered = problems
         if search_q:
             filtered = [p for p in filtered if search_q.lower() in p["name"].lower()]
@@ -881,6 +891,11 @@ elif page == "🔍 Search & Filter":
             filtered = [p for p in filtered if p["difficulty"] == f_diff]
         if f_pat != "All":
             filtered = [p for p in filtered if p["pattern"] == f_pat]
+        if f_tag != "All":
+            filtered = [p for p in filtered if f_tag in p.get("tags", [])]
+        if f_conf != "All":
+            conf_val = int(f_conf[0])
+            filtered = [p for p in filtered if p.get("confidence", 3) == conf_val]
 
         st.markdown(f"**{len(filtered)}** result(s)")
         st.markdown("---")
