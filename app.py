@@ -286,7 +286,22 @@ if problems_list:
         if p.get("key_learnings"): md_lines.append(f"### Key Learnings\n{p['key_learnings']}\n")
         if p.get("mistakes"): md_lines.append(f"### Mistakes\n{p['mistakes']}\n")
         md_lines.append("---")
-    st.sidebar.download_button("📥 Export Solutions", "\n".join(md_lines), "dsa_solutions.md", "text/markdown")
+    st.sidebar.download_button("📥 Export Solutions (MD)", "\n".join(md_lines), "dsa_solutions.md", "text/markdown")
+
+    # CSV Export
+    csv_header = "Name,Platform,Difficulty,Pattern,Language,Date,Time(min),Confidence,Independent,Time Complexity,Space Complexity,URL\n"
+    csv_rows = []
+    for p in problems_list:
+        row = [
+            p['name'], p.get('platform',''), p['difficulty'], p['pattern'],
+            p.get('language',''), p.get('date',''), str(p.get('time_taken',0)),
+            str(p.get('confidence','')), str(p.get('independent',False)),
+            p.get('time_complexity',''), p.get('space_complexity',''),
+            p.get('problem_url','')
+        ]
+        csv_rows.append(",".join(f'"{c}"' for c in row))
+    csv_data = csv_header + "\n".join(csv_rows)
+    st.sidebar.download_button("📥 Export CSV", csv_data, "dsa_problems.csv", "text/csv", key="csv_export")
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Built for the **15 LPA Journey** 🎯")
