@@ -358,6 +358,42 @@ if page == "📊 Dashboard":
             st.markdown(f"**LinkedIn Activity** — `{pct4}%`")
             st.progress(min(settings['linkedin_posts']/36, 1.0))
 
+        # ── Weak Pattern Alerts ──
+        if problems_list:
+            today = date.today()
+            pattern_stats = {}
+            for p in problems_list:
+                pat = p['pattern']
+                if pat not in pattern_stats:
+                    pattern_stats[pat] = {'count': 0, 'conf_sum': 0, 'last_date': '2000-01-01'}
+                pattern_stats[pat]['count'] += 1
+                pattern_stats[pat]['conf_sum'] += p.get('confidence', 3)
+                if p.get('date', '') > pattern_stats[pat]['last_date']:
+                    pattern_stats[pat]['last_date'] = p.get('date', '')
+
+            weak_patterns = []
+            for pat in NEETCODE_150:
+                if pat not in pattern_stats:
+                    weak_patterns.append(f"⚠️ **{pat}** — not started yet")
+                else:
+                    ps = pattern_stats[pat]
+                    avg_conf = ps['conf_sum'] / ps['count']
+                    try:
+                        last_d = datetime.strptime(ps['last_date'], "%Y-%m-%d").date()
+                        days_ago = (today - last_d).days
+                    except (ValueError, TypeError):
+                        days_ago = 999
+                    if avg_conf < 3:
+                        weak_patterns.append(f"🟡 **{pat}** — avg confidence {avg_conf:.1f}/5")
+                    elif days_ago >= 7:
+                        weak_patterns.append(f"🔵 **{pat}** — last practiced {days_ago}d ago")
+
+            if weak_patterns:
+                st.markdown("---")
+                st.subheader("⚡ Weak Pattern Alerts")
+                for wp in weak_patterns[:5]:
+                    st.markdown(wp)
+
         st.markdown("---")
 
         # Daily Goal
