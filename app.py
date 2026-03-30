@@ -413,6 +413,23 @@ if page == "📊 Dashboard":
                 remaining = daily_target - today_solved
                 st.info(f"📝 {today_solved}/{daily_target} solved today — {remaining} more to go! Go to **💻 DSA Tracker** to log.")
 
+        # ── Weekly Summary ──
+        week_start = str(date.today() - timedelta(days=date.today().weekday()))
+        week_problems = [p for p in problems_list if p.get("date", "") >= week_start]
+        if week_problems:
+            st.markdown("---")
+            st.subheader("📅 This Week")
+            wc1, wc2, wc3, wc4 = st.columns(4)
+            wc1.metric("Solved", len(week_problems))
+            w_easy = sum(1 for p in week_problems if p["difficulty"] == "Easy")
+            w_med = sum(1 for p in week_problems if p["difficulty"] == "Medium")
+            w_hard = sum(1 for p in week_problems if p["difficulty"] == "Hard")
+            wc2.metric("Breakdown", f"🟢{w_easy} 🟡{w_med} 🔴{w_hard}")
+            w_timed = [p for p in week_problems if p.get("time_taken", 0) > 0]
+            wc3.metric("Avg Time", f"{round(sum(p['time_taken'] for p in w_timed)/len(w_timed))} min" if w_timed else "—")
+            w_patterns = len({p["pattern"] for p in week_problems})
+            wc4.metric("Patterns", f"{w_patterns} covered")
+
         # ── Next Up Suggestion ──
         solved_names_lower = {p["name"].lower().strip() for p in problems_list}
         next_problem = None
