@@ -396,6 +396,19 @@ if page == "📊 Dashboard":
             st.markdown(f"**{next_category}** → [{next_problem}]({url})")
             st.caption("Your next unsolved NeetCode 150 problem")
 
+        # ── Random Problem Picker ──
+        all_unsolved = [(cat, p) for cat, probs in NEETCODE_150.items() for p in probs if p.lower().strip() not in solved_names_lower]
+        if all_unsolved:
+            st.markdown("---")
+            st.subheader("🎲 Can't Decide?")
+            if st.button("🎲 Pick a Random Problem", key="random_pick"):
+                cat, rp = random.choice(all_unsolved)
+                st.session_state["random_problem"] = (cat, rp)
+            if "random_problem" in st.session_state:
+                rcat, rpname = st.session_state["random_problem"]
+                rurl = get_leetcode_url(rpname)
+                st.success(f"**{rcat}** → [{rpname}]({rurl})")
+
         st.markdown("---")
 
         # Quick daily log
