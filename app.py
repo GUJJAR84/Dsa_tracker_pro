@@ -265,6 +265,7 @@ st.sidebar.markdown("---")
 page = st.sidebar.radio("Navigate", [
     "📊 Dashboard", "💻 DSA Tracker", "📖 Problem Solutions",
     "🗺️ NeetCode 150", "🔄 Revision Tracker", "🔍 Search & Filter",
+    "⏱️ Mock Interview", "📓 Daily Journal", "🏆 Contests",
     "📚 Learning (Short)", "🏗️ Projects (Long)", "📈 Analytics"
 ])
 
@@ -942,6 +943,212 @@ elif page == "🔍 Search & Filter":
                 if p.get("code"):
                     st.code(p["code"], language=p.get("language","java").lower())
                 st.markdown(f"**Time:** `{p.get('time_complexity','-')}` | **Space:** `{p.get('space_complexity','-')}` | **Confidence:** {'⭐'*p.get('confidence',0)}")
+
+# ═══════════════════════════════════════════════════════════
+# ─── MOCK INTERVIEW ───────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+elif page == "⏱️ Mock Interview":
+    st.title("⏱️ Mock Interview Simulator")
+    st.info("💡 Simulate real interview conditions: pick a difficulty, get a random problem, and solve it under time pressure!")
+
+    solved_names_lower = {p["name"].lower().strip() for p in problems_list}
+    unsolved_by_diff = {}
+    for cat, probs in NEETCODE_150.items():
+        for pname in probs:
+            if pname.lower().strip() not in solved_names_lower:
+                # Guess difficulty from NeetCode category ordering
+                unsolved_by_diff.setdefault("Random", []).append((cat, pname))
+
+    # Settings
+    mi1, mi2 = st.columns(2)
+    with mi1:
+        mock_diff = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1)
+    with mi2:
+        time_limits = {"Easy": 15, "Medium": 25, "Hard": 45}
+        mock_time = st.number_input("Time Limit (min)", 5, 90, time_limits[mock_diff])
+
+    if st.button("🎲 Start Mock Interview", type="primary"):
+        all_unsolved = [(cat, p) for cat, probs in NEETCODE_150.items() for p in probs if p.lower().strip() not in solved_names_lower]
+        if all_unsolved:
+            cat, pname = random.choice(all_unsolved)
+            st.session_state["mock_problem"] = {
+                "name": pname, "category": cat, "difficulty": mock_diff,
+                "time_limit": mock_time, "start_time": datetime.now().isoformat()
+            }
+        else:
+            st.success("🎉 You've solved all NeetCode 150 problems!")
+
+    if "mock_problem" in st.session_state:
+        mp = st.session_state["mock_problem"]
+        url = get_leetcode_url(mp["name"])
+        st.markdown("---")
+        st.markdown(f"### 🎯 {mp['name']}")
+        st.markdown(f"**Category:** {mp['category']} | **Target Difficulty:** {mp['difficulty']} | **Time Limit:** {mp['time_limit']} min")
+        st.markdown(f"🔗 [Open on LeetCode]({url})")
+
+        start = datetime.fromisoformat(mp["start_time"])
+        elapsed = (datetime.now() - start).total_seconds() / 60
+        remaining = max(0, mp["time_limit"] - elapsed)
+
+        if remaining > 0:
+            progress_pct = elapsed / mp["time_limit"]
+            color = "normal" if progress_pct < 0.5 else "off" if progress_pct < 0.8 else "off"
+            st.progress(min(progress_pct, 1.0))
+            st.metric("⏱️ Time Remaining", f"{int(remaining)} min {int((remaining % 1) * 60)} sec")
+            st.caption("💡 Refresh the page to update the timer")
+
+            mc1, mc2 = st.columns(2)
+            with mc1:
+                if st.button("✅ Solved It!", type="primary"):
+                    st.success(f"🎉 Great job! Solved in {elapsed:.1f} minutes!")
+                    st.balloons()
+                    # Pre-fill the tracker form
+                    st.session_state.prefill_name = mp["name"]
+                    st.session_state.prefill_platform = "NeetCode 150"
+                    st.session_state.prefill_pattern = mp["category"]
+                    st.session_state.prefill_url = url
+                    del st.session_state["mock_problem"]
+                    st.info("👆 Head to **💻 DSA Tracker** to log your solution!")
+            with mc2:
+                if st.button("🏳️ Give Up"):
+                    st.warning(f"No worries! Review the solution and try again later. Time used: {elapsed:.1f} min")
+                    del st.session_state["mock_problem"]
+        else:
+            st.error(f"⏰ Time's up! You used {elapsed:.1f} minutes (limit: {mp['time_limit']} min)")
+            if st.button("🔄 Try Another", type="primary"):
+                del st.session_state["mock_problem"]
+                st.rerun()
+
+    # Mock history
+    st.markdown("---")
+    st.subheader("📋 Interview Tips")
+    st.markdown("""
+    1. **Read the problem carefully** — spend 2-3 min understanding before coding
+    2. **Talk through your approach** — interviewers value thought process
+    3. **Start with brute force** — then optimize
+    4. **Test edge cases** — empty arrays, single elements, negative numbers
+    5. **Time yourself honestly** — no peeking at solutions until time is up
+    """)
+
+# ═══════════════════════════════════════════════════════════
+# ─── DAILY JOURNAL ────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+elif page == "📓 Daily Journal":
+    st.title("📓 Daily Journal")
+    st.info("💡 Quick daily reflections — what you learned, struggled with, and want to focus on tomorrow.")
+
+    today_str = str(date.today())
+    today_entry = db.get_journal_entry(today_str)
+
+    st.subheader(f"📅 Today — {today_str}")
+    journal_text = st.text_area(
+        "What did you learn today?",
+        value=today_entry["content"] if today_entry else "",
+        height=200,
+        placeholder="• Learned about sliding window pattern\n• Struggled with two pointer approach for 3Sum\n• Tomorrow: practice more medium difficulty problems",
+        key="journal_today"
+    )
+    if st.button("💾 Save Entry", type="primary"):
+        db.upsert_journal(today_str, journal_text)
+        st.success("✅ Journal saved!")
+
+    # Past entries
+    st.markdown("---")
+    st.subheader("📖 Past Entries")
+    entries = db.get_journal_entries()
+    entries = [e for e in entries if e["date"] != today_str]  # exclude today
+
+    if not entries:
+        st.markdown('<div class="empty-state"><div class="icon">📓</div><div class="title">No past entries</div><div class="desc">Start writing daily to build a learning log!</div></div>', unsafe_allow_html=True)
+    else:
+        for entry in entries[:14]:  # show last 2 weeks
+            with st.expander(f"📅 {entry['date']}"):
+                st.markdown(entry["content"])
+
+# ═══════════════════════════════════════════════════════════
+# ─── CONTEST TRACKER ──────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+elif page == "🏆 Contests":
+    st.title("🏆 Contest Tracker")
+
+    contests = db.get_contests()
+
+    # Stats
+    if contests:
+        cc1, cc2, cc3 = st.columns(3)
+        cc1.metric("Contests", len(contests))
+        rated = [c for c in contests if c.get("rating", 0) > 0]
+        if rated:
+            cc2.metric("Best Rating", max(c["rating"] for c in rated))
+            cc3.metric("Latest Rating", rated[0]["rating"])
+
+    # Add contest
+    st.subheader("➕ Log a Contest")
+    with st.form("add_contest_form", clear_on_submit=True):
+        ctc1, ctc2 = st.columns(2)
+        with ctc1:
+            ct_platform = st.selectbox("Platform", ["LeetCode", "Codeforces", "CodeChef", "AtCoder", "Other"])
+            ct_name = st.text_input("Contest Name", placeholder="Weekly Contest 420")
+        with ctc2:
+            ct_date = st.date_input("Date", date.today())
+            ct_rating = st.number_input("Rating (after)", 0, 5000, 0)
+
+        ctc3, ctc4 = st.columns(2)
+        with ctc3:
+            ct_rank = st.number_input("Rank", 0, 100000, 0)
+        with ctc4:
+            ct_solved = st.number_input("Problems Solved", 0, 10, 0)
+            ct_total = st.number_input("Total Problems", 0, 10, 4)
+
+        ct_notes = st.text_area("Notes", height=80, placeholder="What went well? What to improve?")
+
+        if st.form_submit_button("📝 Log Contest", type="primary"):
+            db.add_contest({
+                "platform": ct_platform, "name": ct_name, "date": str(ct_date),
+                "rating": ct_rating, "rank": ct_rank,
+                "problems_solved": ct_solved, "total_problems": ct_total,
+                "notes": ct_notes
+            })
+            st.success(f"✅ Logged: {ct_name}")
+            st.rerun()
+
+    # Contest history
+    st.markdown("---")
+    st.subheader("📋 Contest History")
+    if not contests:
+        st.markdown('<div class="empty-state"><div class="icon">🏆</div><div class="title">No contests logged</div><div class="desc">Participate in a contest and log it here!</div></div>', unsafe_allow_html=True)
+    else:
+        for ct in contests:
+            solve_str = f"{ct['problems_solved']}/{ct['total_problems']}" if ct.get('total_problems') else str(ct.get('problems_solved', 0))
+            with st.expander(f"🏆 {ct['name'] or ct['platform']} — {ct['date']} · Solved {solve_str}"):
+                ct1, ct2, ct3 = st.columns(3)
+                ct1.markdown(f"**Platform:** {ct['platform']}")
+                ct2.markdown(f"**Rating:** {ct['rating']}" if ct.get('rating') else "**Rating:** —")
+                ct3.markdown(f"**Rank:** #{ct['rank']}" if ct.get('rank') else "**Rank:** —")
+                if ct.get("notes"):
+                    st.markdown(f"**Notes:** {ct['notes']}")
+                if st.button("🗑️ Delete", key=f"del_ct_{ct['id']}"):
+                    db.delete_contest(ct['id'])
+                    st.rerun()
+
+        # Rating chart
+        rated = [c for c in reversed(contests) if c.get("rating", 0) > 0]
+        if len(rated) >= 2:
+            st.markdown("---")
+            st.subheader("📈 Rating Progress")
+            fig_rating = go.Figure(data=[go.Scatter(
+                x=[c["date"] for c in rated],
+                y=[c["rating"] for c in rated],
+                mode="lines+markers",
+                line=dict(color="#6366f1", width=3),
+                marker=dict(size=8, color="#818cf8"),
+            )])
+            fig_rating.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#334155"), height=300, margin=dict(t=10,b=30,l=40,r=10),
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor="#e2e8f0"),
+            )
+            st.plotly_chart(fig_rating, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════
 # ─── LEARNING (SHORT GOALS) — Enhanced ───────────────────
