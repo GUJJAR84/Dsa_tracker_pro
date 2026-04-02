@@ -60,7 +60,8 @@ def init_db():
             mistakes        TEXT DEFAULT '',
             date            TEXT NOT NULL,
             revision_count  INTEGER DEFAULT 0,
-            last_revised    TEXT
+            last_revised    TEXT,
+            companies       TEXT DEFAULT '[]'
         );
 
         CREATE TABLE IF NOT EXISTS topics (
@@ -89,9 +90,33 @@ def init_db():
             week4_tasks TEXT DEFAULT ''
         );
 
+        CREATE TABLE IF NOT EXISTS journal (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            date    TEXT NOT NULL UNIQUE,
+            content TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS contests (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform  TEXT DEFAULT 'LeetCode',
+            name      TEXT DEFAULT '',
+            date      TEXT NOT NULL,
+            rating    INTEGER DEFAULT 0,
+            rank      INTEGER DEFAULT 0,
+            problems_solved INTEGER DEFAULT 0,
+            total_problems  INTEGER DEFAULT 0,
+            notes     TEXT DEFAULT ''
+        );
+
         -- Ensure settings row exists
         INSERT OR IGNORE INTO settings (id) VALUES (1);
         """)
+
+    # Auto-migrate: add companies column if missing
+    with get_conn() as conn:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(problems)").fetchall()]
+        if 'companies' not in cols:
+            conn.execute("ALTER TABLE problems ADD COLUMN companies TEXT DEFAULT '[]'")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -128,6 +153,10 @@ def _row_to_problem(row):
         d['tags'] = json.loads(d['tags']) if d['tags'] else []
     except (json.JSONDecodeError, TypeError):
         d['tags'] = []
+    try:
+        d['companies'] = json.loads(d.get('companies', '[]')) if d.get('companies') else []
+    except (json.JSONDecodeError, TypeError):
+        d['companies'] = []
     return d
 
 
@@ -144,12 +173,14 @@ def get_problem_count():
 
 def add_problem(p: dict) -> int:
     tags_json = json.dumps(p.get('tags', []))
+    companies_json = json.dumps(p.get('companies', []))
     with get_conn() as conn:
         cur = conn.execute("""
             INSERT INTO problems (name, platform, problem_url, difficulty, pattern, language,
                 approach, code, time_complexity, space_complexity, time_taken,
-                independent, confidence, tags, key_learnings, mistakes, date, revision_count, last_revised)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                independent, confidence, tags, key_learnings, mistakes, date,
+                revision_count, last_revised, companies)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             p.get('name',''), p.get('platform','LeetCode'), p.get('problem_url',''),
             p.get('difficulty','Easy'), p.get('pattern',''), p.get('language','Java'),
@@ -158,7 +189,8 @@ def add_problem(p: dict) -> int:
             p.get('time_taken',0), int(p.get('independent', False)),
             p.get('confidence',3), tags_json,
             p.get('key_learnings',''), p.get('mistakes',''),
-            p.get('date',''), p.get('revision_count',0), p.get('last_revised')
+            p.get('date',''), p.get('revision_count',0), p.get('last_revised'),
+            companies_json
         ))
         return cur.lastrowid
 
@@ -168,13 +200,13 @@ def update_problem(problem_id: int, **kwargs):
         'name','platform','problem_url','difficulty','pattern','language',
         'approach','code','time_complexity','space_complexity','time_taken',
         'independent','confidence','tags','key_learnings','mistakes',
-        'date','revision_count','last_revised'
+        'date','revision_count','last_revised','companies'
     }
     fields = {}
     for k, v in kwargs.items():
         if k not in valid:
             continue
-        if k == 'tags':
+        if k in ('tags', 'companies'):
             fields[k] = json.dumps(v) if isinstance(v, list) else v
         elif k == 'independent':
             fields[k] = int(v)
@@ -345,6 +377,58 @@ def migrate_from_json(json_path: str):
     print(f"   Topics:   {len(get_topics())}")
     print(f"   Projects: {len(get_projects())}")
     return True
+
+
+# ═══════════════════════════════════════════════════════════
+# ─── JOURNAL ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+def get_journal_entries():
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM journal ORDER BY date DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_journal_entry(date_str: str):
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM journal WHERE date=?", (date_str,)).fetchone()
+    return dict(row) if row else None
+
+
+def upsert_journal(date_str: str, content: str):
+    with get_conn() as conn:
+        existing = conn.execute("SELECT id FROM journal WHERE date=?", (date_str,)).fetchone()
+        if existing:
+            conn.execute("UPDATE journal SET content=? WHERE date=?", (content, date_str))
+        else:
+            conn.execute("INSERT INTO journal (date, content) VALUES (?,?)", (date_str, content))
+
+
+# ═══════════════════════════════════════════════════════════
+# ─── CONTESTS ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+def get_contests():
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM contests ORDER BY date DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_contest(c: dict) -> int:
+    with get_conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO contests (platform, name, date, rating, rank, problems_solved, total_problems, notes)
+            VALUES (?,?,?,?,?,?,?,?)
+        """, (
+            c.get('platform','LeetCode'), c.get('name',''), c.get('date',''),
+            c.get('rating',0), c.get('rank',0),
+            c.get('problems_solved',0), c.get('total_problems',0),
+            c.get('notes','')
+        ))
+        return cur.lastrowid
+
+
+def delete_contest(contest_id: int):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM contests WHERE id=?", (contest_id,))
 
 
 # Initialize on import

@@ -578,6 +578,9 @@ elif page == "💻 DSA Tracker":
         with mc3:
             tags_input = st.text_input("Tags (comma sep)", placeholder="revisit, tricky")
 
+        # Company tags
+        companies_input = st.text_input("🏢 Companies (comma sep)", placeholder="Google, Amazon, Meta")
+
         # Learnings
         lc1, lc2 = st.columns(2)
         with lc1:
@@ -594,13 +597,15 @@ elif page == "💻 DSA Tracker":
                 st.warning(f"⚠️ '{problem_name}' already exists! Edit it in **📖 Problem Solutions** instead.")
             else:
                 tags = [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
+                companies = [c.strip() for c in companies_input.split(",") if c.strip()] if companies_input else []
                 db.add_problem({
                     "name": problem_name.strip(), "platform": platform, "problem_url": problem_url,
                     "difficulty": difficulty, "pattern": pattern, "language": language,
                     "approach": approach, "code": code,
                     "time_complexity": time_complexity, "space_complexity": space_complexity,
                     "time_taken": time_taken, "independent": independent, "confidence": confidence,
-                    "tags": tags, "key_learnings": key_learnings, "mistakes": mistakes,
+                    "tags": tags, "companies": companies,
+                    "key_learnings": key_learnings, "mistakes": mistakes,
                     "date": str(date.today()), "revision_count": 0, "last_revised": None
                 })
                 st.success(f"✅ Added: **{problem_name}**")
@@ -734,6 +739,9 @@ elif page == "📖 Problem Solutions":
                     if prob.get("tags"):
                         tags_html = " ".join(f'<span class="tag-pill">{t}</span>' for t in prob["tags"])
                         st.markdown(tags_html, unsafe_allow_html=True)
+                    if prob.get("companies"):
+                        comp_html = " ".join(f'<span class="tag-pill" style="background:#f59e0b22;color:#f59e0b;border-color:#f59e0b33">🏢 {c}</span>' for c in prob["companies"])
+                        st.markdown(comp_html, unsafe_allow_html=True)
                     if prob.get("approach"):
                         st.markdown("#### 💡 Approach")
                         st.markdown(prob["approach"])
@@ -899,6 +907,13 @@ elif page == "🔍 Search & Filter":
         with ff2:
             f_conf = st.selectbox("⭐ Confidence", ["All", "1 ⭐", "2 ⭐⭐", "3 ⭐⭐⭐", "4 ⭐⭐⭐⭐", "5 ⭐⭐⭐⭐⭐"])
 
+        # Third row: company filter
+        all_companies = sorted({c for p in problems for c in p.get("companies", []) if c})
+        if all_companies:
+            f_company = st.selectbox("🏢 Company", ["All"] + all_companies)
+        else:
+            f_company = "All"
+
         filtered = problems
         if search_q:
             filtered = [p for p in filtered if search_q.lower() in p["name"].lower()]
@@ -913,6 +928,8 @@ elif page == "🔍 Search & Filter":
         if f_conf != "All":
             conf_val = int(f_conf[0])
             filtered = [p for p in filtered if p.get("confidence", 3) == conf_val]
+        if f_company != "All":
+            filtered = [p for p in filtered if f_company in p.get("companies", [])]
 
         st.markdown(f"**{len(filtered)}** result(s)")
         st.markdown("---")
