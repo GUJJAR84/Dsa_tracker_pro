@@ -10,6 +10,10 @@ import re
 # ─── Page Config ────────────────────────────────────────────
 st.set_page_config(page_title="DSA Tracker Pro", page_icon="🚀", layout="wide")
 
+# ─── Theme Toggle ───────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
 # ─── Premium CSS ────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -260,6 +264,33 @@ else:
     st.sidebar.metric("📅 Day", f"{days_elapsed + 1} / 84")
     st.sidebar.metric("📆 Week", f"{current_week} / 12")
     st.sidebar.metric("🔥 Streak", f"{settings['streak']} days")
+
+st.sidebar.markdown("---")
+theme_label = "🌗 Light Mode" if st.session_state.theme == "dark" else "🌗 Dark Mode"
+if st.sidebar.button(theme_label, key="theme_toggle"):
+    st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+    st.rerun()
+
+# Inject light mode CSS if needed
+if st.session_state.theme == "light":
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
+        border-right: 1px solid #cbd5e1;
+    }
+    section[data-testid="stSidebar"] * { color: #1e293b !important; }
+    div[data-testid="stMetric"] {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    div[data-testid="stMetric"] label { color: #475569 !important; }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #0f172a !important; }
+    .stat-card { background: linear-gradient(135deg, #f1f5f9, #e2e8f0) !important; border-color: #cbd5e1 !important; }
+    .stat-card .number { color: #0f172a !important; }
+    .stat-card .label { color: #475569 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 page = st.sidebar.radio("Navigate", [
