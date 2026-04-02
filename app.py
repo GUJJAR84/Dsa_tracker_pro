@@ -505,6 +505,47 @@ if page == "📊 Dashboard":
                                    streak=new_streak, last_active=today)
                 st.success(f"✅ Logged! Streak: {new_streak} days 🔥")
                 st.balloons()
+
+        # ── Shareable Progress Card ──
+        st.markdown("---")
+        st.subheader("📤 Share Your Progress")
+        if st.button("🖼️ Generate Progress Card"):
+            neetcode_solved = sum(1 for cat in NEETCODE_150.values() for p in cat if p.lower() in {x["name"].lower() for x in problems_list})
+            card_html = f"""
+            <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:20px;padding:32px;
+                        color:#f1f5f9;font-family:Inter,sans-serif;max-width:500px;border:1px solid #334155;
+                        box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:28px;font-weight:800;">🚀 DSA Tracker Pro</div>
+                    <div style="color:#94a3b8;font-size:13px;margin-top:4px;">My Coding Journey</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0;">
+                    <div style="background:#6366f122;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-size:32px;font-weight:800;color:#818cf8;">{solved_count}</div>
+                        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">Problems Solved</div>
+                    </div>
+                    <div style="background:#22c55e22;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-size:32px;font-weight:800;color:#22c55e;">{settings['streak']}</div>
+                        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">Day Streak</div>
+                    </div>
+                    <div style="background:#eab30822;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-size:32px;font-weight:800;color:#eab308;">{neetcode_solved}</div>
+                        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">NeetCode 150</div>
+                    </div>
+                    <div style="background:#06b6d422;border-radius:12px;padding:16px;text-align:center;">
+                        <div style="font-size:32px;font-weight:800;color:#06b6d4;">{settings['github_commits']}</div>
+                        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">GitHub Commits</div>
+                    </div>
+                </div>
+                <div style="text-align:center;color:#64748b;font-size:11px;margin-top:8px;">
+                    Generated on {str(date.today())} · #DSA #CodingJourney
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+            st.download_button("📥 Download Card (HTML)", card_html, "progress_card.html", "text/html", key="card_dl")
+            st.caption("💡 Tip: Screenshot this card and share on LinkedIn!")
+
     else:
         st.markdown("""
         <div class="empty-state">
