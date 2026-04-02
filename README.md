@@ -1,30 +1,56 @@
-# 🎯 12-Week Progress Tracker
+# 🚀 DSA Tracker Pro
 
-A Streamlit app to track your DSA practice, ML learning, and project progress.
+A comprehensive DSA problem tracker built with **Streamlit** and **SQLite** — designed for serious interview preparation.
 
-## Features
+## ✨ Features
 
-- **📊 Dashboard** — Overview of all progress with daily logging
-- **💻 DSA Tracker** — Log problems with approach, solution code, complexity analysis, platform, confidence, and more
-- **📖 Problem Solutions** — Browse and review all saved solutions with syntax-highlighted code
-- **🗺️ NeetCode 150** — Visual roadmap showing your progress across all NeetCode 150 categories
-- **🔄 Revision Tracker** — Spaced repetition system to revisit low-confidence problems
-- **🔍 Search & Filter** — Find problems by name, platform, difficulty, or pattern
-- **📚 Learning (Short Goals)** — 16 ML topics checklist
-- **🏗️ Projects (Long Goals)** — 3 project milestones
-- **📈 Analytics** — Difficulty distribution, platform stats, confidence charts, time analysis, weekly heatmap
-- **📥 Export** — Download all solutions as a formatted Markdown file
+### Core Tracking
+- **📊 Dashboard** — Progress metrics, streak tracker, milestone badges, weekly summary, weak pattern alerts
+- **💻 DSA Tracker** — Log problems with approach, code, complexity, tags, and company tags
+- **📖 Problem Solutions** — Searchable journal with inline edit, delete, pagination
+- **🗺️ NeetCode 150** — Complete roadmap with per-category progress and one-click solve buttons
 
-## How to Run
+### Interview Prep
+- **⏱️ Mock Interview** — Timed practice with random problem selection and countdown timer
+- **🏢 Company Tags** — Tag problems by company (Google, Amazon, etc.) and filter by target company
+- **🔄 Revision Tracker** — Spaced repetition system ranked by confidence and recency
+
+### Learning & Projects
+- **📚 Learning (Short)** — Track study topics with studied/built/posted checkboxes, notes, resources
+- **🏗️ Projects (Long)** — Weekly milestones, deploy status, tech stack, GitHub/demo links
+- **🏆 Contest Tracker** — Log contest ratings, rankings, and track progress over time
+
+### Analytics & Insights
+- **📈 Analytics** — Difficulty/pattern/platform/confidence charts, GitHub-style calendar heatmap
+- **📋 Pattern Performance** — Per-pattern stats table (avg confidence, avg time, independence rate)
+
+### Utilities
+- **🔍 Search & Filter** — Filter by platform, difficulty, pattern, tag, company, confidence
+- **📓 Daily Journal** — Quick daily reflections and learning notes
+- **📤 Progress Card** — Generate a shareable stats card for LinkedIn
+- **💾 Backup/Restore** — One-click database backup and restore
+- **📥 Export** — Markdown and CSV export of all solutions
+- **🌗 Light/Dark Mode** — Toggle between light and dark themes
+
+## 🛠️ Tech Stack
+
+- **Frontend:** Streamlit
+- **Backend:** Python
+- **Database:** SQLite (WAL mode, ACID-compliant)
+- **Charts:** Plotly
+
+## 🚀 Quick Start
 
 ```bash
-pip install streamlit>=1.28.0
-cd TRACKER_APP
-streamlit run app.py
+pip install streamlit plotly
+python -m streamlit run app.py
 ```
 
-Opens at `http://localhost:8501`
+## 📁 Files
 
-## Data Storage
-
-All progress is saved in `progress_data.json`. Existing data is auto-migrated when new fields are added.
+| File | Purpose |
+|---|---|
+| `app.py` | Main application (all pages) |
+| `database.py` | SQLite schema + CRUD helpers |
+| `migrate_json.py` | One-time JSON → SQLite migration |
+| `tracker.db` | Your data (auto-created, gitignored) |
