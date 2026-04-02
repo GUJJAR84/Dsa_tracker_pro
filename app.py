@@ -304,6 +304,23 @@ if problems_list:
     csv_data = csv_header + "\n".join(csv_rows)
     st.sidebar.download_button("📥 Export CSV", csv_data, "dsa_problems.csv", "text/csv", key="csv_export")
 
+# Backup / Restore
+st.sidebar.markdown("---")
+import shutil
+db_path = db.DB_FILE
+if db_path.exists():
+    with open(db_path, "rb") as f:
+        st.sidebar.download_button("💾 Backup Database", f.read(), "tracker_backup.db", "application/octet-stream", key="db_backup")
+
+uploaded_db = st.sidebar.file_uploader("📂 Restore Database", type=["db"], key="db_restore")
+if uploaded_db is not None:
+    # Save backup first
+    backup_path = db_path.with_suffix(".db.bak")
+    shutil.copy2(str(db_path), str(backup_path))
+    with open(db_path, "wb") as f:
+        f.write(uploaded_db.getvalue())
+    st.sidebar.success("✅ Database restored! Please refresh the page.")
+
 st.sidebar.markdown("---")
 st.sidebar.caption("Built for the **15 LPA Journey** 🎯")
 
