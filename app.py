@@ -1475,38 +1475,62 @@ elif page == "📈 Analytics":
 
         st.markdown("---")
 
-        # ── Daily Activity Heatmap ──
-        st.subheader("📅 Daily Activity")
+        # ── GitHub-style Calendar Heatmap ──
+        st.subheader("📅 Activity Calendar")
         date_counts = Counter(p.get("date","") for p in problems)
         if date_counts:
             dates = sorted(date_counts.keys())
-            # Fill in gaps
             start = datetime.strptime(dates[0], "%Y-%m-%d").date()
             end = date.today()
-            all_dates = []
-            all_counts = []
-            d = start
+
+            # Build calendar data: weeks × days
+            # Align to start on Monday
+            start_monday = start - timedelta(days=start.weekday())
+            weeks = []
+            week_labels = []
+            day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            z_data = [[] for _ in range(7)]  # 7 rows (Mon-Sun)
+            text_data = [[] for _ in range(7)]
+
+            d = start_monday
+            week_num = 0
             while d <= end:
-                ds = str(d)
-                all_dates.append(ds)
-                all_counts.append(date_counts.get(ds, 0))
+                dow = d.weekday()  # 0=Mon, 6=Sun
+                if dow == 0:
+                    week_num += 1
+                    if d.day <= 7:
+                        week_labels.append(d.strftime("%b"))
+                    else:
+                        week_labels.append("")
+                count = date_counts.get(str(d), 0)
+                z_data[dow].append(count)
+                text_data[dow].append(f"{d.strftime('%b %d')}: {count} solved")
                 d += timedelta(days=1)
 
-            fig_heat = go.Figure(data=[go.Bar(
-                x=all_dates, y=all_counts,
-                marker=dict(
-                    color=all_counts,
-                    colorscale=[[0,"#1e293b"],[0.01,"#312e81"],[0.5,"#6366f1"],[1,"#a78bfa"]],
-                    cornerradius=4,
-                ),
+            # Pad incomplete weeks
+            max_len = max(len(row) for row in z_data)
+            for i in range(7):
+                while len(z_data[i]) < max_len:
+                    z_data[i].append(None)
+                    text_data[i].append("")
+
+            fig_cal = go.Figure(data=[go.Heatmap(
+                z=z_data,
+                text=text_data,
+                hoverinfo="text",
+                colorscale=[[0, "#161b22"], [0.01, "#0e4429"], [0.25, "#006d32"], [0.5, "#26a641"], [1, "#39d353"]],
+                showscale=False,
+                xgap=3, ygap=3,
             )])
-            fig_heat.update_layout(
+            fig_cal.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#334155"), height=200, margin=dict(t=10,b=30,l=30,r=10),
-                xaxis=dict(showgrid=False, tickformat="%b %d"),
-                yaxis=dict(showgrid=False, dtick=1),
+                font=dict(color="#94a3b8", size=11),
+                height=180, margin=dict(t=10, b=20, l=40, r=10),
+                yaxis=dict(tickvals=list(range(7)), ticktext=day_labels, showgrid=False, autorange="reversed"),
+                xaxis=dict(showgrid=False, tickvals=list(range(len(week_labels))),
+                           ticktext=week_labels, side="top"),
             )
-            st.plotly_chart(fig_heat, use_container_width=True)
+            st.plotly_chart(fig_cal, use_container_width=True)
 
         st.markdown("---")
 
