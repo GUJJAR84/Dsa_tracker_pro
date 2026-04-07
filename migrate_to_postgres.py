@@ -17,7 +17,8 @@ import database as db
 SQLITE_PATH = Path(__file__).parent / "tracker.db"
 
 TABLES = [
-    ("settings", "id"),
+    ("users", "id"),
+    ("settings", "user_id"),
     ("problems", "id"),
     ("topics", "id"),
     ("projects", "id"),
@@ -39,6 +40,9 @@ def copy_table(sqlite_conn: sqlite3.Connection, pg_conn: psycopg.Connection, tab
     cols = get_sqlite_columns(sqlite_conn, table)
     if not cols:
         return 0
+
+    if table == "settings":
+        cols = [c for c in cols if c != "id"]
 
     col_list = ", ".join(q_ident(c) for c in cols)
     placeholders = ", ".join(["%s"] * len(cols))
@@ -63,6 +67,7 @@ def copy_table(sqlite_conn: sqlite3.Connection, pg_conn: psycopg.Connection, tab
 
 
 def reset_sequences(pg_conn: psycopg.Connection):
+    pg_conn.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1), true)")
     pg_conn.execute("SELECT setval(pg_get_serial_sequence('problems', 'id'), COALESCE((SELECT MAX(id) FROM problems), 1), true)")
     pg_conn.execute("SELECT setval(pg_get_serial_sequence('journal', 'id'), COALESCE((SELECT MAX(id) FROM journal), 1), true)")
     pg_conn.execute("SELECT setval(pg_get_serial_sequence('contests', 'id'), COALESCE((SELECT MAX(id) FROM contests), 1), true)")

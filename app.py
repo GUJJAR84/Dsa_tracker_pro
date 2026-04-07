@@ -242,7 +242,155 @@ def get_leetcode_url(name):
     slug = re.sub(r'-+', '-', slug).strip('-')  # clean double hyphens
     return f"https://leetcode.com/problems/{slug}/"
 
-# ─── Load from SQLite ──────────────────────────────────────
+AUTH_MAX_FAILS = 5
+
+
+def _reset_auth_state():
+    st.session_state.auth_user_id = None
+    st.session_state.auth_username = ""
+    st.session_state.auth_email = ""
+    st.session_state.auth_fail_count = 0
+    st.session_state.auth_lock_until = 0
+    db.set_active_user(None)
+
+
+def _is_auth_locked():
+    return st.session_state.get("auth_lock_until", 0) > datetime.now().timestamp()
+
+
+def render_auth_screen():
+    st.markdown(
+        """
+        <style>
+        .auth-shell {
+            max-width: 980px;
+            margin: 3rem auto 1rem auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9));
+            border: 1px solid rgba(100,116,139,0.35);
+            border-radius: 24px;
+            box-shadow: 0 18px 60px rgba(0,0,0,0.28);
+        }
+        .auth-title {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 0.3rem;
+        }
+        .auth-subtitle {
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+        }
+        .auth-badge {
+            display: inline-block;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(99,102,241,0.18);
+            color: #c7d2fe;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="auth-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="auth-title">DSA Tracker Pro</div>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-subtitle">Private tracking for your interview prep, secured with account-based access.</div>', unsafe_allow_html=True)
+    st.markdown('<span class="auth-badge">Login required</span><span class="auth-badge">Password hashed</span><span class="auth-badge">Per-user data</span>', unsafe_allow_html=True)
+
+    login_tab, signup_tab = st.tabs(["Login", "Sign up"])
+
+    with login_tab:
+        with st.form("login_form"):
+            identifier = st.text_input("Username or email")
+            password = st.text_input("Password", type="password")
+            submit_login = st.form_submit_button("Login", type="primary")
+
+        if submit_login:
+            if _is_auth_locked():
+                remaining = int(st.session_state.auth_lock_until - datetime.now().timestamp())
+                st.error(f"Too many failed attempts. Try again in {max(1, remaining)} seconds.")
+            elif not identifier or not password:
+                st.error("Enter both username/email and password.")
+            else:
+                user = db.authenticate_user(identifier, password)
+                if user:
+                    db.set_active_user(user["id"])
+                    db.claim_legacy_data(user["id"])
+                    db.seed_user_data(user["id"])
+                    st.session_state.auth_user_id = user["id"]
+                    st.session_state.auth_username = user["username"]
+                    st.session_state.auth_email = user.get("email") or ""
+                    st.session_state.auth_fail_count = 0
+                    st.session_state.auth_lock_until = 0
+                    st.rerun()
+                else:
+                    st.session_state.auth_fail_count = st.session_state.get("auth_fail_count", 0) + 1
+                    if st.session_state.auth_fail_count >= AUTH_MAX_FAILS:
+                        st.session_state.auth_lock_until = datetime.now().timestamp() + 60
+                        st.session_state.auth_fail_count = 0
+                        st.error("Too many failed attempts. Locked for 60 seconds.")
+                    else:
+                        st.error("Invalid credentials.")
+
+    with signup_tab:
+        with st.form("signup_form"):
+            new_username = st.text_input("Choose a username")
+            new_email = st.text_input("Email (optional)")
+            new_password = st.text_input("Create a password", type="password")
+            confirm_password = st.text_input("Confirm password", type="password")
+            submit_signup = st.form_submit_button("Create account", type="primary")
+
+        if submit_signup:
+            if _is_auth_locked():
+                remaining = int(st.session_state.auth_lock_until - datetime.now().timestamp())
+                st.error(f"Too many failed attempts. Try again in {max(1, remaining)} seconds.")
+            elif not new_username or not new_password:
+                st.error("Username and password are required.")
+            elif new_password != confirm_password:
+                st.error("Passwords do not match.")
+            elif len(new_password) < 8 or not re.search(r"[A-Za-z]", new_password) or not re.search(r"\d", new_password):
+                st.error("Password must be at least 8 characters and include letters and numbers.")
+            else:
+                try:
+                    user_id = db.create_user(new_username, new_password, new_email)
+                    db.set_active_user(user_id)
+                    db.claim_legacy_data(user_id)
+                    db.seed_user_data(user_id)
+                    st.session_state.auth_user_id = user_id
+                    st.session_state.auth_username = new_username.strip().lower()
+                    st.session_state.auth_email = new_email.strip().lower()
+                    st.session_state.auth_fail_count = 0
+                    st.session_state.auth_lock_until = 0
+                    st.success("Account created. You are signed in.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(str(exc))
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+if "auth_user_id" not in st.session_state:
+    st.session_state.auth_user_id = None
+if "auth_username" not in st.session_state:
+    st.session_state.auth_username = ""
+if "auth_email" not in st.session_state:
+    st.session_state.auth_email = ""
+if "auth_fail_count" not in st.session_state:
+    st.session_state.auth_fail_count = 0
+if "auth_lock_until" not in st.session_state:
+    st.session_state.auth_lock_until = 0
+
+if st.session_state.auth_user_id:
+    db.set_active_user(st.session_state.auth_user_id)
+    db.seed_user_data(st.session_state.auth_user_id)
+else:
+    render_auth_screen()
+    st.stop()
+
+# ─── Load from SQLite / PostgreSQL ─────────────────────────
 settings = db.get_settings()
 problems_list = db.get_problems()
 solved_count = len(problems_list)
@@ -250,6 +398,11 @@ solved_count = len(problems_list)
 # ─── Sidebar ────────────────────────────────────────────────
 st.sidebar.markdown("# 🚀 DSA Tracker Pro")
 st.sidebar.markdown("---")
+
+st.sidebar.markdown(f"**Signed in as:** `{st.session_state.auth_username}`")
+if st.sidebar.button("🚪 Logout", key="logout_btn"):
+    _reset_auth_state()
+    st.rerun()
 
 if settings["start_date"] is None:
     st.sidebar.subheader("Set Start Date")

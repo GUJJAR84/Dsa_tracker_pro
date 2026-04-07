@@ -2,6 +2,8 @@
 
 DSA Tracker Pro is a Streamlit app for structured interview prep. It helps you track solved problems, revision cycles, company tags, learning topics, projects, contests, and progress analytics in one place.
 
+It now includes secured login and signup, with per-user data isolation so each account sees only its own tracker data.
+
 ## Features
 
 - Dashboard with streaks, milestones, daily goals, weak pattern alerts, and weekly summary
@@ -50,6 +52,13 @@ Copy-Item .env.example .env
 ```bash
 python -m streamlit run app.py
 ```
+
+## Login and Signup
+
+- Open the app and create an account from the Sign up tab.
+- Passwords are hashed with PBKDF2 before storage.
+- Failed login attempts are rate-limited in-session.
+- Use the Logout button in the sidebar to end your session.
 
 ## Database Modes
 
@@ -119,6 +128,7 @@ streamlit run app.py --server.address=0.0.0.0 --server.port=$PORT --server.headl
 - Keep `.env.example` with placeholders only.
 - Rotate DB credentials immediately if exposed.
 - Pre-commit secret scanning is enabled with `.pre-commit-config.yaml`.
+- Never store real passwords or connection strings in the README or source files.
 
 Setup hooks once:
 
