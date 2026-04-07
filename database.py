@@ -534,7 +534,7 @@ def add_problem(p: dict) -> int:
                 approach, code, time_complexity, space_complexity, time_taken,
                 independent, confidence, tags, key_learnings, mistakes, date,
                 revision_count, last_revised, companies)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """ + returning), (
             _current_user_id(),
             p.get('name',''), p.get('platform','LeetCode'), p.get('problem_url',''),
@@ -790,7 +790,7 @@ def add_contest(c: dict) -> int:
         returning = " RETURNING id" if IS_POSTGRES else ""
         cur = conn.execute(_sql(f"""
             INSERT INTO contests (user_id, platform, name, date, rating, rank, problems_solved, total_problems, notes)
-            VALUES (?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?)
         """ + returning), (
             _current_user_id(),
             c.get('platform','LeetCode'), c.get('name',''), c.get('date',''),
