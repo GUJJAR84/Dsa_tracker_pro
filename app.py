@@ -339,18 +339,20 @@ if problems_list:
 st.sidebar.markdown("---")
 import shutil
 db_path = db.DB_FILE
-if db_path.exists():
+if db_path is not None and db_path.exists():
     with open(db_path, "rb") as f:
         st.sidebar.download_button("💾 Backup Database", f.read(), "tracker_backup.db", "application/octet-stream", key="db_backup")
 
 uploaded_db = st.sidebar.file_uploader("📂 Restore Database", type=["db"], key="db_restore")
-if uploaded_db is not None:
+if uploaded_db is not None and db_path is not None:
     # Save backup first
     backup_path = db_path.with_suffix(".db.bak")
     shutil.copy2(str(db_path), str(backup_path))
     with open(db_path, "wb") as f:
         f.write(uploaded_db.getvalue())
     st.sidebar.success("✅ Database restored! Please refresh the page.")
+elif uploaded_db is not None and db_path is None:
+    st.sidebar.warning("Restore via .db file is only available in SQLite mode.")
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Built for the **15 LPA Journey** 🎯")

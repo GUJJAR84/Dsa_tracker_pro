@@ -1,56 +1,129 @@
-# 🚀 DSA Tracker Pro
+# DSA Tracker Pro
 
-A comprehensive DSA problem tracker built with **Streamlit** and **SQLite** — designed for serious interview preparation.
+DSA Tracker Pro is a Streamlit app for structured interview prep. It helps you track solved problems, revision cycles, company tags, learning topics, projects, contests, and progress analytics in one place.
 
-## ✨ Features
+## Features
 
-### Core Tracking
-- **📊 Dashboard** — Progress metrics, streak tracker, milestone badges, weekly summary, weak pattern alerts
-- **💻 DSA Tracker** — Log problems with approach, code, complexity, tags, and company tags
-- **📖 Problem Solutions** — Searchable journal with inline edit, delete, pagination
-- **🗺️ NeetCode 150** — Complete roadmap with per-category progress and one-click solve buttons
+- Dashboard with streaks, milestones, daily goals, weak pattern alerts, and weekly summary
+- Problem logger with approach, code, complexity, confidence, tags, and company mapping
+- NeetCode 150 roadmap with category progress and quick links
+- Revision tracker, search/filter, daily journal, and mock interview timer
+- Learning and long-project tracking with milestone checklists
+- Analytics: difficulty, pattern, confidence, and activity trends
+- Backup/export tools (Markdown, CSV, and SQLite backup in SQLite mode)
 
-### Interview Prep
-- **⏱️ Mock Interview** — Timed practice with random problem selection and countdown timer
-- **🏢 Company Tags** — Tag problems by company (Google, Amazon, etc.) and filter by target company
-- **🔄 Revision Tracker** — Spaced repetition system ranked by confidence and recency
+## Tech Stack
 
-### Learning & Projects
-- **📚 Learning (Short)** — Track study topics with studied/built/posted checkboxes, notes, resources
-- **🏗️ Projects (Long)** — Weekly milestones, deploy status, tech stack, GitHub/demo links
-- **🏆 Contest Tracker** — Log contest ratings, rankings, and track progress over time
+- Python + Streamlit
+- Plotly for charts
+- SQLite (default local mode)
+- PostgreSQL (production mode via `DATABASE_URL`)
 
-### Analytics & Insights
-- **📈 Analytics** — Difficulty/pattern/platform/confidence charts, GitHub-style calendar heatmap
-- **📋 Pattern Performance** — Per-pattern stats table (avg confidence, avg time, independence rate)
-
-### Utilities
-- **🔍 Search & Filter** — Filter by platform, difficulty, pattern, tag, company, confidence
-- **📓 Daily Journal** — Quick daily reflections and learning notes
-- **📤 Progress Card** — Generate a shareable stats card for LinkedIn
-- **💾 Backup/Restore** — One-click database backup and restore
-- **📥 Export** — Markdown and CSV export of all solutions
-- **🌗 Light/Dark Mode** — Toggle between light and dark themes
-
-## 🛠️ Tech Stack
-
-- **Frontend:** Streamlit
-- **Backend:** Python
-- **Database:** SQLite (WAL mode, ACID-compliant)
-- **Charts:** Plotly
-
-## 🚀 Quick Start
-
-```bash
-pip install streamlit plotly
-python -m streamlit run app.py
-```
-
-## 📁 Files
+## Project Structure
 
 | File | Purpose |
 |---|---|
-| `app.py` | Main application (all pages) |
-| `database.py` | SQLite schema + CRUD helpers |
-| `migrate_json.py` | One-time JSON → SQLite migration |
-| `tracker.db` | Your data (auto-created, gitignored) |
+| `app.py` | Main Streamlit app |
+| `database.py` | Data layer (SQLite/PostgreSQL auto-switch) |
+| `migrate_json.py` | Legacy JSON -> DB migration |
+| `migrate_to_postgres.py` | SQLite -> PostgreSQL migration |
+| `.streamlit/config.toml` | Streamlit runtime settings |
+| `Procfile` | Start command for hosted platforms |
+| `runtime.txt` | Python runtime pin |
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Create local env file from template:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+3. Run app:
+
+```bash
+python -m streamlit run app.py
+```
+
+## Database Modes
+
+The app supports two modes automatically:
+
+- SQLite mode: used when `DATABASE_URL` is empty
+- PostgreSQL mode: used when `DATABASE_URL` starts with `postgres://` or `postgresql://`
+
+If PostgreSQL is enabled, data is read/written directly to Neon (or any PostgreSQL provider).
+
+## Migrate Existing Data to PostgreSQL
+
+1. Create a PostgreSQL database (Neon recommended).
+2. Put the connection string in `.env`:
+
+```env
+DATABASE_URL=REPLACE_WITH_YOUR_DATABASE_URL
+```
+
+3. Run migration:
+
+```bash
+python migrate_to_postgres.py
+```
+
+Notes:
+
+- Existing `tracker.db` is not deleted.
+- Migration is upsert-based, so re-running is safe.
+- After migration, start app normally and it will use PostgreSQL.
+
+## Deploy
+
+### Streamlit Community Cloud (Recommended)
+
+1. Push repository to GitHub.
+2. Open Streamlit Cloud and create a new app.
+3. Set main file path to `app.py`.
+4. Add secret:
+
+```toml
+DATABASE_URL="REPLACE_WITH_YOUR_DATABASE_URL"
+```
+
+5. Deploy.
+
+### Render (Alternative)
+
+1. Create a Web Service from this repo.
+2. Build command:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Start command:
+
+```bash
+streamlit run app.py --server.address=0.0.0.0 --server.port=$PORT --server.headless=true
+```
+
+4. Add `DATABASE_URL` environment variable.
+
+## Secret Hygiene
+
+- `.env` is git-ignored and must never be committed.
+- Keep `.env.example` with placeholders only.
+- Rotate DB credentials immediately if exposed.
+- Pre-commit secret scanning is enabled with `.pre-commit-config.yaml`.
+
+Setup hooks once:
+
+```bash
+pip install pre-commit detect-secrets
+pre-commit install
+pre-commit run --all-files
+```
