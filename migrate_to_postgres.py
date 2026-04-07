@@ -37,12 +37,15 @@ def get_sqlite_columns(conn: sqlite3.Connection, table: str):
 
 
 def copy_table(sqlite_conn: sqlite3.Connection, pg_conn: psycopg.Connection, table: str, conflict_col: str):
-    cols = get_sqlite_columns(sqlite_conn, table)
+    original_cols = get_sqlite_columns(sqlite_conn, table)
+    cols = list(original_cols)
     if not cols:
         return 0
 
     if table == "settings":
         cols = [c for c in cols if c != "id"]
+        if "user_id" not in cols:
+            cols = ["user_id"] + cols
 
     col_list = ", ".join(q_ident(c) for c in cols)
     placeholders = ", ".join(["%s"] * len(cols))
@@ -60,7 +63,11 @@ def copy_table(sqlite_conn: sqlite3.Connection, pg_conn: psycopg.Connection, tab
             f"ON CONFLICT ({q_ident(conflict_col)}) DO NOTHING"
         )
 
-    rows = sqlite_conn.execute(f"SELECT {', '.join(cols)} FROM {table}").fetchall()
+    if table == "settings" and "user_id" not in original_cols:
+        select_cols = [c for c in original_cols if c != "id"]
+        rows = [(0,) + tuple(row) for row in sqlite_conn.execute(f"SELECT {', '.join(select_cols)} FROM {table}").fetchall()]
+    else:
+        rows = sqlite_conn.execute(f"SELECT {', '.join(cols)} FROM {table}").fetchall()
     for row in rows:
         pg_conn.execute(insert_sql, tuple(row))
     return len(rows)

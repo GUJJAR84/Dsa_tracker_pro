@@ -100,6 +100,16 @@ def _ensure_user_row(user_id: int):
         return row is not None
 
 
+def _sqlite_columns(conn, table_name: str):
+    return [row[1] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()]
+
+
+def _sqlite_add_column_if_missing(conn, table_name: str, column_name: str, column_sql: str):
+    columns = _sqlite_columns(conn, table_name)
+    if column_name not in columns:
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
+
+
 def create_user(username: str, password: str, email: str = ""):
     username_clean = _normalize_username(username)
     email_clean = email.strip().lower() or None
@@ -418,7 +428,6 @@ def init_db():
                 week3_tasks TEXT DEFAULT '',
                 week4_tasks TEXT DEFAULT ''
             );
-
             CREATE TABLE IF NOT EXISTS journal (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER DEFAULT 0,
@@ -438,19 +447,20 @@ def init_db():
                 total_problems  INTEGER DEFAULT 0,
                 notes     TEXT DEFAULT ''
             );
-
-            INSERT OR IGNORE INTO settings (user_id) VALUES (0);
             """)
 
-        # Auto-migrate: add companies column if missing
+        # Auto-migrate legacy SQLite databases.
         with get_conn() as conn:
-            cols = [r[1] for r in conn.execute("PRAGMA table_info(problems)").fetchall()]
-            if 'companies' not in cols:
-                conn.execute("ALTER TABLE problems ADD COLUMN companies TEXT DEFAULT '[]'")
+            _sqlite_add_column_if_missing(conn, "problems", "companies", "companies TEXT DEFAULT '[]'")
             for table in ("settings", "problems", "topics", "projects", "journal", "contests"):
-                cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
-                if 'user_id' not in cols:
-                    conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER DEFAULT 0")
+                _sqlite_add_column_if_missing(conn, table, "user_id", "user_id INTEGER DEFAULT 0")
+
+            conn.execute("UPDATE settings SET user_id=0 WHERE user_id IS NULL")
+            existing_settings = conn.execute("SELECT COUNT(*) FROM settings").fetchone()[0]
+            if existing_settings == 0:
+                conn.execute("INSERT INTO settings (user_id) VALUES (0)")
+            else:
+                conn.execute("UPDATE settings SET user_id=0 WHERE user_id IS NULL OR user_id <> 0")
 
 
 # ═══════════════════════════════════════════════════════════
